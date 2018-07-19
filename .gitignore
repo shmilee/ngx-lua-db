@@ -1,0 +1,4 @@
+~
+deploy
+*.tar
+*.tar.xz
