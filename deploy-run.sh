@@ -1,9 +1,13 @@
 #!/bin/bash
 sudo rm -rv ./deploy/
 mkdir -pv ./deploy/{etc,log}
-cp -r ./etc ./deploy/
+cp -rv ./etc ./deploy/
 sudo chown root:root ./deploy/etc/monitrc
 sudo chmod 600 ./deploy/etc/monitrc
+
+mkdir  -pv ./deploy/etc/lualib/
+cp -rv ./lua_module/lua-resty-mysql/lib/resty ./deploy/etc/lualib/
+cp -rv ./lua_module/lua-resty-redis/lib/resty ./deploy/etc/lualib/
 
 MYSQL_VOLUME='mysql'
 MOUNT_ARG="type=volume,src=$MYSQL_VOLUME,dst=/var/lib/mysql"

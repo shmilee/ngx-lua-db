@@ -1,0 +1,6 @@
+[submodule "lua_module/lua-resty-mysql"]
+	path = lua_module/lua-resty-mysql
+	url = https://github.com/openresty/lua-resty-mysql
+[submodule "lua_module/lua-resty-redis"]
+	path = lua_module/lua-resty-redis
+	url = https://github.com/openresty/lua-resty-redis
