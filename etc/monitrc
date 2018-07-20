@@ -17,7 +17,7 @@ set eventqueue
 set httpd port 2812
     use address 127.0.0.1
     allow 127.0.0.1
-    allow admin:'adminpassword' read-only
+    allow admin:'adminpassword' # read-only
 
 ###############################################################################
 ## Services
