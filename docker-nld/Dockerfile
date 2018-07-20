@@ -31,6 +31,7 @@ RUN echo https://mirrors.tuna.tsinghua.edu.cn/alpine/v3.8/main >> /etc/apk/repos
         tini monit iproute2 \
         mynginx mynginx-meta-small-modules \
         mariadb mariadb-client redis \
+        lua5.1-cjson \
  && cp /usr/share/zoneinfo/${TIMEZONE} /etc/localtime \
  && echo "${TIMEZONE}" > /etc/timezone \
  && echo "==> clean ..." \
