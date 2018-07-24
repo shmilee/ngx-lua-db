@@ -125,69 +125,50 @@ server {
             }
     }
     # mysql
-    location /test {
-            default_type 'text/plain';
-            content_by_lua '
-                local mysql = require "resty.mysql"
-                local db, err = mysql:new()
-                if not db then
-                    ngx.say("failed to instantiate mysql: ", err)
-                    return
-                end
-
-                db:set_timeout(2000) -- 2 sec
-
-
-                local ok, err, errcode, sqlstate = db:connect{
-                    host = "127.0.0.1",
-                    port = 3306,
-                    database = "ngx_test",
-                    user = "ngx_test",
-                    password = "ngx_test",
-                    charset = "utf8",
-                    max_packet_size = 1024 * 1024,
-                }
-
-                if not ok then
-                    ngx.say("failed to connect: ", err, ": ", errcode, " ", sqlstate)
-                    return
-                end
-
-                ngx.say("connected to mysql.")
+    location /mysql {
+        default_type 'text/plain';
+        content_by_lua_block {
+            local dbact = require("cclua.activity")
+            local conn, err = dbact:new('set')
+            if not conn then
+                ngx.say('error: ', err)
+                return
+            else
+                ngx.say('Get connect!', err)
+            end
+            local res = conn:add_activity({
+                title='活动名称1',
+                author='shmilee',
+                a_host='嘉兴文化馆',
+                contact='电话 12112323123',
+                submission_datetime='2018-07-20 13:34:06',
+                start_datetime='2018-07-21 10:10:00',
+                duration='2:30:00',
+                longitude=37.0000056,
+                latitude=123.4567890123456789,
+                location='无名路18号',
+                a_type='演讲',
+                reservation='个人预约',
+                introduction="MySQL中定义数据字段的类型对你数据库的优化是\n非常重要的。",
+            })
+            if not res then
+                ngx.say('insert error: ', err)
+                return
+            else
+                ngx.say('add user!', err)
+            end
+            local res = conn:rmv_activity({
+                a_id=8,
+            })
+            if not res then
+                ngx.say('remove error: ', err)
+                return
+            else
+                ngx.say('remove user 2!', err)
+            end
 
                 local res, err, errcode, sqlstate =
-                    db:query("drop table if exists cats")
-                if not res then
-                    ngx.say("bad result: ", err, ": ", errcode, ": ", sqlstate, ".")
-                    return
-                end
-
-                res, err, errcode, sqlstate =
-                    db:query("create table cats "
-                             .. "(id serial primary key, "
-                             .. "name varchar(5))")
-                if not res then
-                    ngx.say("bad result: ", err, ": ", errcode, ": ", sqlstate, ".")
-                    return
-                end
-
-                ngx.say("table cats created.")
-
-                res, err, errcode, sqlstate =
-                    db:query("insert into cats (name) "
-                             .. "values (\'Bob\'),(\'\'),(null)")
-                if not res then
-                    ngx.say("bad result: ", err, ": ", errcode, ": ", sqlstate, ".")
-                    return
-                end
-
-                ngx.say(res.affected_rows, " rows inserted into table cats ",
-                        "(last insert id: ", res.insert_id, ")")
-
-                -- run a select query, expected about 10 rows in
-                -- the result set:
-                res, err, errcode, sqlstate =
-                    db:query("select * from cats order by id asc", 10)
+                    conn:next_week_activity({n=3})
                 if not res then
                     ngx.say("bad result: ", err, ": ", errcode, ": ", sqlstate, ".")
                     return
@@ -196,13 +177,35 @@ server {
                 local cjson = require "cjson"
                 ngx.say("result: ", cjson.encode(res))
 
-                -- put it into the connection pool of size 100,
-                -- with 10 seconds max idle timeout
-                local ok, err = db:set_keepalive(10000, 100)
-                if not ok then
-                    ngx.say("failed to set keepalive: ", err)
-                    return
-                end
-            ';
+            local res = conn:spare_conn()
+            if not res then
+                ngx.say('spare error: ', err)
+                return
+            else
+                ngx.say('spare ok!', err)
+            end
         }
+    }
+    location /mysql_json {
+        charset utf-8;
+        default_type application/json;
+        content_by_lua_block {
+            local dbact = require("cclua.activity")
+            local conn, err = dbact:new('get')
+            if not conn then
+                resp = {status=false, err=err}
+            else
+                local res, err, errcode, sqlstate = conn:next_week_activity()
+                if not res then
+                    resp = {status=false, err=err, errcode=errcode}
+                else
+                    resp = {status=true, result=res}
+                end
+            end
+            local cjson = require "cjson"
+            ngx.status = ngx.HTTP_OK  
+            ngx.say(cjson.encode(resp))
+            return ngx.exit(ngx.HTTP_OK)  
+        }
+    }
 }
