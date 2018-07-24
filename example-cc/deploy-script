@@ -1,0 +1,4 @@
+#!/bin/bash
+echo "[deploy] example-cc"
+dir='./example-cc'
+cp -rv "$dir"/cclua ./deploy/etc/lualib/
