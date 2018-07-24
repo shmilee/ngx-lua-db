@@ -1,4 +1,6 @@
 #!/bin/bash
+example_script="${1:-./example-xx/xx_script}"
+
 sudo rm -rv ./deploy/
 mkdir -pv ./deploy/{etc,log}
 cp -rv ./etc ./deploy/
@@ -20,7 +22,16 @@ if docker info 2>&1 | grep 'Is the docker daemon running?' >/dev/null; then
     exit 4
 fi
 if ! docker volume inspect $MYSQL_VOLUME 2>&1 >/dev/null; then
+    echo "lost docker volume $MYSQL_VOLUME!"
     exit 6
+fi
+
+# hook script
+if [ -x "$example_script" ]; then
+    "$example_script"
+    if [[ $? != 0 ]]; then
+        echo "WARN: Failed to run $example_script!"
+    fi
 fi
 
 cd ./deploy/
