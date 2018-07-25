@@ -36,7 +36,7 @@ fi
 
 cd ./deploy/
 if [[ $? == 0 ]]; then
-    exec docker run --rm -p 80:80 \
+    exec docker run --rm -p 8083:80 \
         -v $PWD/etc:/srv/etc:ro \
         -v $PWD/log:/srv/log:rw \
         --mount $MOUNT_ARG \
