@@ -208,4 +208,33 @@ server {
             return ngx.exit(ngx.HTTP_OK)  
         }
     }
+    location /test_post {
+        default_type 'text/plain';
+        content_by_lua_block {
+            ngx.req.read_body()
+            local args, err = ngx.req.get_post_args()
+            local resp = {}
+
+            if err == "truncated" then
+                -- one can choose to ignore or reject the current request here
+                resp = {err=err}
+            end
+            if not args then
+                resp = {err="failed to get post args: " .. err}
+            else
+                resp = {err=0, args=args}
+            end
+            local cjson = require "cjson"
+            ngx.status = ngx.HTTP_OK  
+            ngx.say(cjson.encode(resp))
+            ngx.log(ngx.ERR,cjson.encode(resp))
+            return ngx.exit(ngx.HTTP_OK)
+        }
+    }
+    location /test_pass {
+        default_type 'text/plain';
+        content_by_lua_block {
+            ngx.say('123456')
+        }
+    }
 }
