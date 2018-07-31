@@ -1,0 +1,28 @@
+# docker tag <A nld docker image> shmilee/nld:using
+# Copy this file to /etc/systemd/system/
+# sudo systemctl daemon-reload
+# systemctl start nld
+# https://docs.docker.com/articles/systemd/
+
+[Unit]
+Description=mynginx+lua+mysql+redis
+After=network.target
+Requires=docker.service
+After=docker.service
+
+[Service]
+Restart=always
+SyslogIdentifier=nld
+Environment='WebData=/home/WebData'
+ExecStart=/usr/bin/docker run --rm \
+    -p 8083:80 \
+    -v ${WebData}/etc:/srv/etc:ro \
+    -v ${WebData}/log:/srv/log:rw \
+    --mount type=volume,src=mysql,dst=/var/lib/mysql \
+    --name nld_server shmilee/nld:using
+ExecStop=/usr/bin/docker stop -t 2 nld_server
+ExecStop=/usr/bin/docker rm nld_server
+User=whg
+
+[Install]
+WantedBy=multi-user.target
