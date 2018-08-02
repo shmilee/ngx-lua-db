@@ -1,154 +1,137 @@
--- Copyright (c) 2018 shmilee
+-- @Copyright (c) 2018 shmilee
+-- @classmod cclua.activity
 
-local mysql = require("resty.mysql")
-local const = require("cclua.const")
+local tool = require("cclua.tool")
+
+local setmetatable = setmetatable
+local pairs = pairs
+local tonumber = tonumber
+local tostring = tostring
+local string = string
+local next = next
+local math = math
 local ngx = {
     log = ngx.log,
     ERR = ngx.ERR,
-    INFO = ngx.INFO,
     quote_sql_str = ngx.quote_sql_str,
 }
 
-local _M = { _VERSION = '0.01' }
+local _M = { _VERSION = '0.1.0' }
 local mt = { __index = _M }
+local fields = {
+    { name = 'aid',  auto = true,   ftype = 'num', default = nil },
+    { name = 'priority',            ftype = 'num', default = 1 },
+    { name = 'title',               ftype = 'str', default = nil },
+    { name = 'author',              ftype = 'str', default = nil },
+    { name = 'a_host',              ftype = 'str', default = nil },
+    { name = 'contact',             ftype = 'str', default = nil },
+    { name = 'submission_datetime', ftype = 'str', default = nil },
+    { name = 'start_datetime',      ftype = 'str', default = nil },
+    { name = 'duration',            ftype = 'str', default = nil },
+    { name = 'longitude',           ftype = 'num', default = nil },
+    { name = 'latitude',            ftype = 'num', default = nil },
+    { name = 'location',            ftype = 'str', default = nil },
+    { name = 'a_type',              ftype = 'str', default = nil },
+    { name = 'reservation',         ftype = 'str', default = nil },
+    { name = 'introduction',        ftype = 'str', default = nil },
+    { name = 'reserve',             ftype = 'str', default = nil },
+}
 
-function _M:new(action)
-    local dbconn, err = mysql:new()
+function _M:new(user)
+    local dbconn, err = tool.get_dbconn(user)
     if not dbconn then
-        ngx.log(ngx.ERR, "Failed to instantiate mysql: ", err)
-        return nil, err
-    end
-    dbconn:set_timeout(const.MYSQL.TIMEOUT)
-    local user, passwd = nil, nil
-    if action == 'set' then
-        user, passwd = const.MYSQL.SET_USER, const.MYSQL.SET_PASSWORD
-    else
-        user, passwd = const.MYSQL.GET_USER, const.MYSQL.GET_PASSWORD
-    end
-    local ok, err, errcode, sqlstate = dbconn:connect({
-        host = const.MYSQL.HOST,
-        port = const.MYSQL.PORT,
-        database = const.MYSQL.DATABASE,
-        user = user,
-        password = passwd,
-        charset = const.MYSQL.DEFAULT_CHARSET,
-        max_packet_size = const.MYSQL.MAX_PACKET_SIZE,
-    })
-    if not ok then
-        ngx.log(ngx.ERR, "Failed to connect mysql: ", err, ": ", errcode)
         return nil, err
     end
     return setmetatable({ dbconn = dbconn }, mt)
 end
 
-function _M:add_activity(opts)
-    local dbconn = self.dbconn
-    if not dbconn then
-        local err = "Connection needed to query insert!"
-        ngx.log(ngx.ERR, err)
-        return nil, err
-    end
-
-    local priority = tonumber(opts.priority or 1)
-    local title = ngx.quote_sql_str(opts.title)
-    local author = ngx.quote_sql_str(opts.author)
-    local a_host = ngx.quote_sql_str(opts.a_host)
-    local contact = ngx.quote_sql_str(opts.contact)
-    local submission_datetime = ngx.quote_sql_str(opts.submission_datetime)
-    local start_datetime = ngx.quote_sql_str(opts.start_datetime)
-    local duration = ngx.quote_sql_str(opts.duration)
-    local longitude = tonumber(opts.longitude)
-    local latitude = tonumber(opts.latitude)
-    local location = ngx.quote_sql_str(opts.location)
-    local a_type = ngx.quote_sql_str(opts.a_type)
-    local reservation = ngx.quote_sql_str(opts.reservation)
-    local introduction = ngx.quote_sql_str(opts.introduction)
-    local sql = "insert into " .. const.MYSQL.ACT_TABLE ..
-        " (priority, title, author, a_host, contact," ..
-        "  submission_datetime, start_datetime, duration," ..
-        "  longitude, latitude, location," ..
-        "  a_type, reservation, introduction) values (" ..
-        table.concat({
-            priority, title, author, a_host, contact,
-            submission_datetime, start_datetime, duration,
-            longitude, latitude, location,
-            a_type, reservation, introduction}, ', ') .. ")"
-    -- ngx.log(ngx.INFO, sql)
-    local res, err, errcode, sqlstate = dbconn:query(sql)
-    if not res then
-        ngx.log(ngx.ERR, "Insert bad result: ", err, ": ", errcode)
-        return nil, err
-    end
-    ngx.log(ngx.INFO, res.affected_rows, " rows inserted into table " .. const.MYSQL.ACT_TABLE .. ", (last insert id: ", res.insert_id, ")")
-    return res
+function _M:keepalive()
+    return tool.set_keepalive(self.dbconn)
 end
 
-function _M:rmv_activity(opts)
-    local dbconn = self.dbconn
-    if not dbconn then
-        local err = "Connection needed to query delete!"
+function _M:add(values)
+    if not values then
+        local err = "NO activity values to add!"
         ngx.log(ngx.ERR, err)
         return nil, err
     end
-    local a_id = tonumber(opts.a_id or -1)
-    if a_id < 0 then
-        err = "a_id should >=0!"
-        ngx.log(ngx.ERR, err)
-        return nil, err
-    end
-    local sql = "delete from " .. const.MYSQL.ACT_TABLE .. " where a_id=" .. a_id
-    -- ngx.log(ngx.INFO, sql)
-    local res, err, errcode, sqlstate = dbconn:query(sql)
-    if not res then
-        ngx.log(ngx.ERR, "Insert bad result: ", err, ": ", errcode)
-        return nil, err
-    end
-    ngx.log(ngx.INFO, res.affected_rows, " rows deleted from table " .. const.MYSQL.ACT_TABLE .. ", (last delete id: ", res.insert_id, ")")
-    return res
+    return tool.query_insert(self.dbconn, 'activity', fields, values)
 end
 
-function _M:next_week_activity(opts)
-    local dbconn = self.dbconn
-    if not dbconn then
-        local err = "Connection needed to query delete!"
+function _M:del(aid)
+    local aid = tonumber(aid)
+    if not aid then
+        local err = "No activity ID to delete!"
         ngx.log(ngx.ERR, err)
         return nil, err
     end
-    local n = 7
-    if opts then
-        n = tonumber(opts.n)
-    end
-    local sql = "select * from " .. const.MYSQL.ACT_TABLE ..
-        " where CURDATE() <= DATE(start_datetime) AND DATE(start_datetime) < DATE_ADD(CURDATE(), INTERVAL " .. n .. " DAY)" ..
-        " AND priority > 0"
-    -- ngx.log(ngx.INFO, sql)
-    local res, err, errcode, sqlstate = dbconn:query(sql)
-    if not res then
-        ngx.log(ngx.ERR, "Insert bad result: ", err, ": ", errcode)
-        return nil, err
-    end
-    ngx.log(ngx.INFO, res.affected_rows, " rows deleted from table " .. const.MYSQL.ACT_TABLE .. ", (last delete id: ", res.insert_id, ")")
-    return res
+    return tool.query_delete(self.dbconn, 'activity', "aid=" .. aid)
 end
 
--- M2.off_activity()
+function _M:get_by_id(first, long)
+    local first = math.floor(tonumber(first) or 1)
+    local last = first + math.floor(tonumber(long) or 20)
+    return tool.query_select(self.dbconn, 'activity',
+        string.format("aid>=%d AND aid<%d", first, last))
+end
 
-function _M:spare_conn()
-    local dbconn = self.dbconn
-    if not dbconn then
-        local err = "Connection needed to put in pool!"
+function _M:get_by_author(author)
+    if not author then
+        local err = "No author to select!"
         ngx.log(ngx.ERR, err)
         return nil, err
     end
-    -- put it into the connection pool of size 100,
-    -- with 10 seconds max idle timeout
-    local ok, err = dbconn:set_keepalive(10000, 100)
-    if not ok then
-        ngx.log(ngx.ERR, "failed to set keepalive: ", err)
+    local author = ngx.quote_sql_str(author)
+    return tool.query_select(self.dbconn, 'activity', "author=" .. author)
+end
+
+function _M:get_by_type(a_type)
+    if not a_type then
+        local err = "No activity type to select!"
+        ngx.log(ngx.ERR, err)
         return nil, err
-    else
-        return ok
     end
+    local a_type = ngx.quote_sql_str(a_type)
+    return tool.query_select(self.dbconn, 'activity', "a_type=" .. a_type)
+end
+
+function _M:next_week(day)
+    local day = math.floor(tonumber(day) or 7)
+    return tool.query_select(self.dbconn, 'activity',
+        "CURDATE() <= DATE(start_datetime) AND DATE(start_datetime) < DATE_ADD(CURDATE(), INTERVAL " .. day .. " DAY) AND priority > 0")
+end
+
+function _M:edit(aid, values)
+    local aid = tonumber(aid)
+    if not aid then
+        local err = "No activity ID to edit!"
+        ngx.log(ngx.ERR, err)
+        return nil, err
+    end
+    local valid = {}
+    if values and next(values) ~= nil then
+        for n, fi in pairs(fields) do
+            local val = values[fi.name]
+            if not fi.auto and val then
+                if fi.ftype == 'num' then
+                    val = tonumber(val)
+                elseif fi.ftype == 'str' then
+                    val = ngx.quote_sql_str(tostring(val))
+                end
+                valid[fi.name] = val
+            end
+        end
+    end
+    if next(valid) == nil then
+        local err = "NO activity values to edit!"
+        ngx.log(ngx.ERR, err)
+        return nil, err
+    end
+    return tool.query_update(self.dbconn, 'activity', valid, "aid=" .. aid)
+end
+
+function _M:set_priority(aid, priority)
+    return self:edit(aid, { priority = priority })
 end
 
 return _M
