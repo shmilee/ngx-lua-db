@@ -68,8 +68,8 @@ CREATE TABLE IF NOT EXISTS `favorite` (
     cid INT UNSIGNED,
     aid INT UNSIGNED,
     CONSTRAINT pk_ca PRIMARY KEY(cid, aid),
-    CONSTRAINT fk_citizen FOREIGN KEY(cid) REFERENCES citizen(cid),
-    CONSTRAINT fk_activity FOREIGN KEY(aid) REFERENCES activity(aid)
+    CONSTRAINT fk_citizen FOREIGN KEY(cid) REFERENCES citizen(cid) ON DELETE CASCADE,
+    CONSTRAINT fk_activity FOREIGN KEY(aid) REFERENCES activity(aid) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 --
