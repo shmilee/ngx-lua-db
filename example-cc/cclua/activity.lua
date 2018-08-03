@@ -20,7 +20,7 @@ local _M = { _VERSION = '0.1.0' }
 local mt = { __index = _M }
 local fields = {
     { name = 'aid',  auto = true,   ftype = 'num', default = nil },
-    { name = 'priority',            ftype = 'num', default = 1 },
+    { name = 'priority',            ftype = 'num', default = 0 },
     { name = 'title',               ftype = 'str', default = nil },
     { name = 'author',              ftype = 'str', default = nil },
     { name = 'a_host',              ftype = 'str', default = nil },
