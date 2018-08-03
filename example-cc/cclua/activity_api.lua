@@ -42,12 +42,50 @@ local function get_info(args)
 end
 
 -- /activity/edit?
+-- POST: { cmd='add', values={title=...,author=...} }
+-- POST: { cmd='del', aid=num }
+-- POST: { cmd='modify', aid=num, values={title=...,author=...} }
+-- POST: { cmd='set_priority', aid=num, priority=num }
 local function edit_info(args)
-
---    add(values)
---61:function _M:del(aid)
-  --  104:function _M:modify(aid, values)
---133:function _M:set_priority(aid, priority)
+    ngx.req.read_body()
+    local body_str = ngx.req.get_body_data()
+    local response = { status = false, err = nil }    
+    if body_str == nil then
+        response.err = 'ERR_NO_BODYDATA'
+    else
+        local status, data = pcall(cjson.decode, body_str)
+        if status == false then
+            response.err = 'ERR_INVALID_JSON_FORMAT'
+        else
+            local dbconn, err = activity:new('ccsetter')
+            if not dbconn then
+                response.err = err
+            else
+                local res, cmd = nil, data['cmd']
+                if cmd == 'add' then
+                    res, err = dbconn:add(data.values)
+                elseif cmd == 'del' then
+                    res, err = dbconn:del(data.aid)
+                elseif cmd == 'modify' then
+                    res, err = dbconn:modify(data.aid, data.values)
+                elseif cmd == 'set_priority' then
+                    res, err = dbconn:set_priority(data.aid, data.priority)
+                else
+                    res, err = nil, "what info to edit?"
+                end
+                if not res then
+                    response.err = err
+                else
+                    response.result = res
+                    response.status = true
+                end
+                dbconn:keepalive()
+            end
+        end
+    end
+    ngx.status = ngx.HTTP_OK  
+    ngx.say(cjson.encode(response))
+    return ngx.exit(ngx.HTTP_OK)
 end
 
 local function entry()
