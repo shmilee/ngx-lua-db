@@ -70,7 +70,7 @@ end
 
 function _M:get_by_id(first, long)
     local first = math.floor(tonumber(first) or 1)
-    local last = first + math.floor(tonumber(long) or 20)
+    local last = first + math.floor(tonumber(long) or 10)
     return tool.query_select(self.dbconn, 'activity',
         string.format("aid>=%d AND aid<%d", first, last))
 end
@@ -101,10 +101,10 @@ function _M:next_week(day)
         "CURDATE() <= DATE(start_datetime) AND DATE(start_datetime) < DATE_ADD(CURDATE(), INTERVAL " .. day .. " DAY) AND priority > 0")
 end
 
-function _M:edit(aid, values)
+function _M:modify(aid, values)
     local aid = tonumber(aid)
     if not aid then
-        local err = "No activity ID to edit!"
+        local err = "No activity ID to modify!"
         ngx.log(ngx.ERR, err)
         return nil, err
     end
@@ -123,7 +123,7 @@ function _M:edit(aid, values)
         end
     end
     if next(valid) == nil then
-        local err = "NO activity values to edit!"
+        local err = "NO activity values to modify!"
         ngx.log(ngx.ERR, err)
         return nil, err
     end
@@ -131,7 +131,7 @@ function _M:edit(aid, values)
 end
 
 function _M:set_priority(aid, priority)
-    return self:edit(aid, { priority = priority })
+    return self:modify(aid, { priority = priority })
 end
 
 return _M
