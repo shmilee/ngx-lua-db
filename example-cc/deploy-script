@@ -2,3 +2,4 @@
 echo "[deploy] example-cc"
 dir='./example-cc'
 cp -rv "$dir"/cclua ./deploy/etc/lualib/
+cp -v "$dir"/location-cc.conf ./deploy/etc/sites-enabled/
