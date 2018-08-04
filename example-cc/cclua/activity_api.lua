@@ -36,9 +36,7 @@ local function get_info(args)
         end
         dbconn:keepalive()
     end
-    ngx.status = ngx.HTTP_OK  
-    ngx.say(cjson.encode(response))
-    return ngx.exit(ngx.HTTP_OK)
+    return response
 end
 
 -- /activity/edit?
@@ -83,22 +81,21 @@ local function edit_info(args)
             end
         end
     end
-    ngx.status = ngx.HTTP_OK  
-    ngx.say(cjson.encode(response))
-    return ngx.exit(ngx.HTTP_OK)
+    return response
 end
 
 local function entry()
     local request_method = ngx.req.get_method()
     local args, err = ngx.req.get_uri_args()
-
-    ngx.say(cjson.encode({ method = request_method, uri=ngx.var.uri, args=args }))
-
+    local response
     if 'GET' == request_method and '/activity/info' == ngx.var.uri then
-        get_info(args)
+        response = get_info(args)
     elseif 'POST' == request_method and '/activity/edit' == ngx.var.uri then
-        edit_info(args)
+        response = edit_info(args)
     end
+    ngx.status = ngx.HTTP_OK  
+    ngx.say(cjson.encode(response))
+    return ngx.exit(ngx.HTTP_OK)
 end
 
 entry()
