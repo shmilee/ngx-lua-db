@@ -19,9 +19,15 @@ _M.REDIS = {
 }
 
 _M.USER = {
-    ccadmin = { passwd = "ccadmin_pass" },
-    ccsetter = { passwd = "ccsetter_pass" },
-    ccgetter = { passwd = "ccgetter_pass" },
+    ccadmin = { passwd = "ccadmin_pass",
+                grant = { 'activity', 'submitter', 'citizen', 'favorite' },
+              },
+    ccsetter = { passwd = "ccsetter_pass",
+                 grant = { 'activity', 'submitter' },
+               },
+    ccgetter = { passwd = "ccgetter_pass",
+                 grant = { 'activity', 'citizen', 'favorite' },
+               },
 }
 
 return _M

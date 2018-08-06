@@ -39,6 +39,10 @@ local fields = {
 }
 
 function _M:new(user)
+    local auth, err = tool.has_authorization(user, 'activity')
+    if not auth then
+        return nil, err
+    end
     local dbconn, err = tool.get_dbconn(user)
     if not dbconn then
         return nil, err

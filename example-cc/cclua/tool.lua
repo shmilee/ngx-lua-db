@@ -18,6 +18,24 @@ local ngx = {
 
 local _M = { _VERSION = '0.1.0' }
 
+function _M.has_value(tab, val)
+    for index, value in pairs(tab) do
+        if value == val then
+            return true
+        end
+    end
+    return false
+end
+
+function _M.has_authorization(user, tab)
+    if const.USER[user] and _M.has_value(const.USER[user]['grant'], tab) then
+        return true
+    else
+        return false, string.format(
+            'User %s NOT authorized to access table %s!', user, tab)
+    end
+end
+
 function _M.get_dbconn(user)
     local dbconn, err = mysql:new()
     if not dbconn then
