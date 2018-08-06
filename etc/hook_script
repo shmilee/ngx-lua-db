@@ -1,2 +1,4 @@
 #!/bin/bash
 echo "[hook_script] $0"
+chown root:root /srv/etc/monitrc
+chmod 600 /srv/etc/monitrc

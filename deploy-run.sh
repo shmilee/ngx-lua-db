@@ -1,11 +1,9 @@
 #!/bin/bash
 example_script="${1:-./example-xx/xx_script}"
 
-sudo rm -rv ./deploy/
+rm -rvf ./deploy/
 mkdir -pv ./deploy/{etc,log}
 cp -rv ./etc ./deploy/
-sudo chown root:root ./deploy/etc/monitrc
-sudo chmod 600 ./deploy/etc/monitrc
 
 mkdir  -pv ./deploy/etc/lualib/
 cp -rv ./lua_module/lua-resty-mysql/lib/resty ./deploy/etc/lualib/
@@ -37,7 +35,7 @@ fi
 cd ./deploy/
 if [[ $? == 0 ]]; then
     exec docker run --rm -p 8083:80 \
-        -v $PWD/etc:/srv/etc:ro \
+        -v $PWD/etc:/srv/etc:rw \
         -v $PWD/log:/srv/log:rw \
         --mount $MOUNT_ARG \
         --name nld_server shmilee/nld:using
