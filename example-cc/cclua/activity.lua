@@ -8,6 +8,7 @@ local pairs = pairs
 local tonumber = tonumber
 local tostring = tostring
 local string = string
+local type = type
 local next = next
 local math = math
 local ngx = {
@@ -68,37 +69,51 @@ function _M:del(aid)
     return tool.query_delete(self.dbconn, 'activity', "aid=" .. aid)
 end
 
-function _M:get_by_id(first, long)
-    local first = math.floor(tonumber(first) or 1)
-    local last = first + math.floor(tonumber(long) or 10)
-    return tool.query_select(self.dbconn, 'activity',
-        string.format("aid>=%d AND aid<%d", first, last))
-end
-
-function _M:get_by_author(author)
-    if not author then
-        local err = "No author to select!"
-        ngx.log(ngx.ERR, err)
-        return nil, err
-    end
-    local author = ngx.quote_sql_str(author)
-    return tool.query_select(self.dbconn, 'activity', "author=" .. author)
-end
-
-function _M:get_by_type(a_type)
-    if not a_type then
-        local err = "No activity type to select!"
-        ngx.log(ngx.ERR, err)
-        return nil, err
-    end
-    local a_type = ngx.quote_sql_str(a_type)
-    return tool.query_select(self.dbconn, 'activity', "a_type=" .. a_type)
-end
-
 function _M:next_week(day)
     local day = math.floor(tonumber(day) or 7)
     return tool.query_select(self.dbconn, 'activity',
         "CURDATE() <= DATE(start_datetime) AND DATE(start_datetime) < DATE_ADD(CURDATE(), INTERVAL " .. day .. " DAY) AND priority > 0")
+end
+
+-- opts.by={aid,title,author,a_type,start_datetime}
+-- by=aid, opts.first, opts.long
+-- by=title, opts.keyword
+-- by=author, opts.author
+-- by=a_type, opts.a_type
+-- by=start_datetime, opts.start_datetime, opts.day
+function _M:get_by_field(opts)
+    local valid = {}
+    if type(opts.by) ~= 'table' then
+        opts.by = { opts.by }
+    end
+    if next(opts.by) ~= nil then
+        for n, by in pairs(opts.by) do
+            if by == 'aid' then
+                local first = math.floor(tonumber(opts.first) or 1)
+                local last = first + math.floor(tonumber(opts.long) or 10)
+                table.insert(valid, string.format("aid>=%d AND aid<%d", first, last))
+            elseif by == 'title' and opts.keyword ~= nil then
+                local kw = string.format("%%%s%%", opts.keyword)
+                table.insert(valid, string.format("title like %s", ngx.quote_sql_str(kw)))
+            elseif by == 'author' and opts.author ~= nil then
+                table.insert(valid, string.format("author=%s", ngx.quote_sql_str(opts.author)))
+            elseif by == 'a_type' and opts.a_type ~= nil then
+                table.insert(valid, string.format("a_type=%s", ngx.quote_sql_str(opts.a_type)))
+            elseif by == 'start_datetime' and opts.start_datetime ~= nil then
+                local date = string.format("DATE(%s)", opts.start_datetime)
+                local day = math.floor(tonumber(day) or 7)
+                table.insert(valid, string.format(
+                    "%s<= DATE(start_datetime) AND DATE(start_datetime) < DATE_ADD(%s, INTERVAL %d DAY",
+                    date, date, day))
+            end
+        end
+    end
+    if next(valid) == nil then
+        local err = "NO condition to select!"
+        ngx.log(ngx.ERR, err)
+        return nil, err
+    end
+    return tool.query_select(self.dbconn, 'activity', table.concat(valid, ' AND '))
 end
 
 function _M:modify(aid, values)

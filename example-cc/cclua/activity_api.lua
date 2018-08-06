@@ -6,10 +6,13 @@ local activity = require("cclua.activity")
 local ngx = ngx
 
 -- /activity/info?
--- by=id&first=1&long=10
+-- by=next_week&day=3
+-- OR
+-- by=aid&first=1&long=10
+-- by=title&keyword='%%'
 -- by=author&author=a
 -- by=a_type&a_type=b
--- by=week&day=3
+-- by=start_datetime&day=7
 local function get_info(args)
     local dbconn, err = activity:new('ccgetter')
     local response = { status = false, err = nil }
@@ -17,16 +20,10 @@ local function get_info(args)
         response.err = err
     else
         local res
-        if args.by == nil or args.by == 'id' then
-            res, err = dbconn:get_by_id(args.first, args.long)
-        elseif args.by == 'author' then
-            res, err = dbconn:get_by_author(args.author)
-        elseif args.by == 'a_type' then
-            res, err = dbconn:get_by_type(args.a_type)
-        elseif args.by == 'week' then
+        if args.by == nil or args.by == 'next_week' then
             res, err = dbconn:next_week(args.day)
         else
-            res, err = nil, "get info by what?"
+            res, err = dbconn:get_by_field(args)
         end
         if not res then
             response.err = err
