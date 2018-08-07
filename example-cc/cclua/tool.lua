@@ -2,18 +2,24 @@
 -- @classmod cclua.tool
 
 local mysql = require("resty.mysql")
+local resty_sha256 = require("resty.sha256")
+local resty_str = require("resty.string")
 local const = require("cclua.const")
 
 local pairs = pairs
 local tonumber = tonumber
 local tostring = tostring
 local string = string
+local type = type
 local table = table
 local ngx = {
     log = ngx.log,
     ERR = ngx.ERR,
     INFO = ngx.INFO,
     quote_sql_str = ngx.quote_sql_str,
+}
+local ndk = {
+    set_var = ndk.set_var
 }
 
 local _M = { _VERSION = '0.1.0' }
@@ -27,13 +33,17 @@ function _M.has_value(tab, val)
     return false
 end
 
-function _M.has_authorization(user, tab)
-    if const.USER[user] and _M.has_value(const.USER[user]['grant'], tab) then
-        return true
-    else
-        return false, string.format(
-            'User %s NOT authorized to access table %s!', user, tab)
-    end
+-- plain-text password -> encrypted password, salt
+function _M.secure_password(passwd, salt)
+    local salt = salt or ndk.set_var.set_secure_random_alphanum(32)
+    local hash = resty_sha256:new()
+    hash:update(salt)
+    hash:update('$$butter$$')
+    hash:update(passwd)
+    hash:update('$$butter$$')
+    hash:update(salt)
+    local digest = hash:final()
+    return resty_str.to_hex(digest), salt
 end
 
 function _M.get_dbconn(user)
