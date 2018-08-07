@@ -39,15 +39,7 @@ local fields = {
 }
 
 function _M:new(user)
-    local auth, err = tool.has_authorization(user, 'activity')
-    if not auth then
-        return nil, err
-    end
-    local dbconn, err = tool.get_dbconn(user)
-    if not dbconn then
-        return nil, err
-    end
-    return setmetatable({ dbconn = dbconn }, mt)
+    return tool.get_dbconn(user, 'activity', mt)
 end
 
 function _M:keepalive()
@@ -55,10 +47,8 @@ function _M:keepalive()
 end
 
 function _M:add(values)
-    if not values then
-        local err = "NO activity values to add!"
-        ngx.log(ngx.ERR, err)
-        return nil, err
+    if type(values) == 'table' then
+        values.priority = nil
     end
     return tool.query_insert(self.dbconn, 'activity', fields, values)
 end
@@ -75,7 +65,7 @@ end
 
 function _M:next_week(day)
     local day = math.floor(tonumber(day) or 7)
-    return tool.query_select(self.dbconn, 'activity',
+    return tool.query_select(self.dbconn, 'activity', nil,
         "CURDATE() <= DATE(start_datetime) AND DATE(start_datetime) < DATE_ADD(CURDATE(), INTERVAL " .. day .. " DAY) AND priority > 0")
 end
 
@@ -117,7 +107,7 @@ function _M:get_by_field(opts)
         ngx.log(ngx.ERR, err)
         return nil, err
     end
-    return tool.query_select(self.dbconn, 'activity', table.concat(valid, ' AND '))
+    return tool.query_select(self.dbconn, 'activity', nil, table.concat(valid, ' AND '))
 end
 
 function _M:modify(aid, values)

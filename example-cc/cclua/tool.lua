@@ -46,7 +46,11 @@ function _M.secure_password(passwd, salt)
     return resty_str.to_hex(digest), salt
 end
 
-function _M.get_dbconn(user)
+-- Get DB connection table, { dbconn = ?, meth1 = ?, ... }
+-- @param user, mysql user
+-- @param tab, mysql table
+-- @param mt, metatable
+function _M.get_dbconn(user, tab, mt)
     local dbconn, err = mysql:new()
     if not dbconn then
         ngx.log(ngx.ERR, "Failed to instantiate mysql: ", err)
@@ -56,6 +60,10 @@ function _M.get_dbconn(user)
     if not const.USER[user] then
         ngx.log(ngx.ERR, "Connection to mysql need a db user!")
         return nil, 'lost user name!'
+    end
+    if not _M.has_value(const.USER[user]['grant'], tab) then
+        return nil, string.format(
+            'User %s NOT authorized to access table %s!', user, tab)
     end
     local ok, err, errcode, sqlstate = dbconn:connect({
         host = const.MYSQL.HOST,
@@ -70,7 +78,7 @@ function _M.get_dbconn(user)
         ngx.log(ngx.ERR, "Failed to connect mysql: ", err, ": ", errcode)
         return nil, err
     end
-    return dbconn
+    return setmetatable({ dbconn = dbconn }, mt)
 end
 
 function _M.set_keepalive(dbconn)
@@ -95,6 +103,11 @@ end
 function _M.query_insert(dbconn, dbtable, fields, values)
     if not dbconn then
         local err = "Connection needed to query insert!"
+        ngx.log(ngx.ERR, err)
+        return nil, err
+    end
+    if not values or type(values) ~= 'table' then
+        local err = string.format("NO %s values to insert!", dbtable)
         ngx.log(ngx.ERR, err)
         return nil, err
     end
@@ -152,8 +165,9 @@ function _M.query_delete(dbconn, dbtable, condition)
 end
 
 -- Select data from dbtable
+-- @param field, {field1, field2}
 -- @param condition, string
-function _M.query_select(dbconn, dbtable, condition)
+function _M.query_select(dbconn, dbtable, field, condition)
     if not dbconn then
         local err = "Connection needed to query select!"
         ngx.log(ngx.ERR, err)
@@ -164,8 +178,13 @@ function _M.query_select(dbconn, dbtable, condition)
         ngx.log(ngx.ERR, err)
         return nil, err
     end
+    if type(field) == 'table' then
+        field = table.concat(field, ', ')
+    else
+        field = '*'
+    end
     local query_str = string.format(
-        "select * from %s where %s", dbtable, condition)
+        "select %s from %s where %s", field, dbtable, condition)
     --ngx.log(ngx.ERR, query_str)
     local res, err, errcode, sqlstate = dbconn:query(query_str)
     if not res then
