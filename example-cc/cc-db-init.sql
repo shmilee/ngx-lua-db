@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS `submitter` (
     sid INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) UNIQUE NOT NULL,
     passwd VARCHAR(100) NOT NULL,
+    salt VARCHAR(100) NOT NULL,
     sgroup TINYINT UNSIGNED NOT NULL DEFAULT 1,
     employer VARCHAR(50) NOT NULL,
     access_token VARCHAR(100) NOT NULL,
@@ -56,6 +57,7 @@ CREATE TABLE IF NOT EXISTS `activity` (
     reservation VARCHAR(20) NOT NULL,
     introduction TEXT NOT NULL,
     reserve VARCHAR(200) NOT NULL,
+    CONSTRAINT fk_author FOREIGN KEY(author) REFERENCES submitter(name) ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT chk_itude CHECK (longitude<180 AND longitude>-180 AND latitude<90 AND latitude>-90)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
@@ -81,7 +83,7 @@ GRANT ALL ON cultural_centre.* TO 'ccadmin'@'localhost';
 
 CREATE USER 'ccsetter'@'localhost' IDENTIFIED BY 'ccsetter_pass';
 GRANT ALL ON cultural_centre.activity TO 'ccsetter'@'localhost';
-GRANT UPDATE ON cultural_centre.submitter TO 'ccsetter'@'localhost';
+GRANT SELECT, UPDATE ON cultural_centre.submitter TO 'ccsetter'@'localhost';
 
 CREATE USER 'ccgetter'@'localhost' IDENTIFIED BY 'ccgetter_pass';
 GRANT ALL ON cultural_centre.citizen TO 'ccgetter'@'localhost';
