@@ -8,6 +8,7 @@ cp -rv ./etc ./deploy/
 mkdir  -pv ./deploy/etc/lualib/
 cp -rv ./lua_module/lua-resty-mysql/lib/resty ./deploy/etc/lualib/
 cp -rv ./lua_module/lua-resty-redis/lib/resty ./deploy/etc/lualib/
+cp -rv ./lua_module/lua-resty-string/lib/resty ./deploy/etc/lualib/
 
 MYSQL_VOLUME='mysql'
 MOUNT_ARG="type=volume,src=$MYSQL_VOLUME,dst=/var/lib/mysql"
