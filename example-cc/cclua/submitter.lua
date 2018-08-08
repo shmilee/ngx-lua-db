@@ -98,25 +98,25 @@ function _M:get_by_id(first, long)
         string.format("sid>=%d AND sid<%d", first, last))
 end
 
--- return boolean, token, err
+-- return result:{access_token}, err
 function _M:check_password(name, passwd)
     if not name or not passwd then
-        return false, nil, 'Lost user name or password!'
+        return nil, 'Lost user name or password!'
     end
     local res, err = tool.query_select(
         self.dbconn, 'submitter', { 'passwd', 'salt', 'access_token' },
         string.format("name=%s limit 1", ngx.quote_sql_str(tostring(name))))
     if not res then
-        return false, nil, err
+        return nil, err
     end
     if not res[1] or type(res[1]) ~= 'table' then
-        return false, nil, string.format("Invalid user name %s!", name)
+        return nil, string.format("Invalid user name %s!", name)
     end
     passwd, _ = tool.secure_password(passwd, res[1].salt)
     if passwd == res[1].passwd then
-        return true, res[1].access_token, nil
+        return { access_token = res[1].access_token }, nil
     else
-        return false, nil, string.format("Wrong password for user %s!", name)
+        return nil, string.format("Wrong password for user %s!", name)
     end
 end
 
